@@ -70,17 +70,30 @@ class Player {
 			m_shape.setOrigin({20.f, 30.f});
 		}
 
-		void update(float &delta) {
-			if (sf::Keyboard::isKeyPressed(config.turnLeft)) {
-				m_rotation -= sf::degrees(ROTATION_SPEED * delta);
-			}
-			if (sf::Keyboard::isKeyPressed(config.turnRight)) {
-				m_rotation += sf::degrees(ROTATION_SPEED * delta);
-			}
-			if (sf::Keyboard::isKeyPressed(config.thrust)) {
-				m_position += sf::Vector2f(SPEED * delta, m_rotation); 
-			}
+		void update(float &delta, std::vector<Bullet> &bullets) {
+		    if (sf::Keyboard::isKeyPressed(config.turnLeft)) {
+		        m_rotation -= sf::degrees(ROTATION_SPEED * delta);
+		    }
+		    if (sf::Keyboard::isKeyPressed(config.turnRight)) {
+		        m_rotation += sf::degrees(ROTATION_SPEED * delta);
+		    }
+		    if (sf::Keyboard::isKeyPressed(config.thrust)) {
+		        m_position += sf::Vector2f(SPEED * delta, m_rotation); 
+		    }
+
+		    if (sf::Keyboard::isKeyPressed(config.shoot)) {
+		        // 1. Считаем вектор скорости пули (скорость 800 пикселей/сек)
+		        sf::Vector2f bulletVelocity = sf::Vector2f(800.f, m_rotation);
+		        
+		        // 2. Считаем смещение для носа корабля (нос выдвинут на 40 пикселей вперед)
+		        sf::Vector2f noseOffset = sf::Vector2f(40.f, m_rotation);
+		        
+		        // Инициализируем пулю декартовыми координатами положения и скорости
+		        bullets.push_back(Bullet(m_position + noseOffset, bulletVelocity));
+		    }
 		}
+		
+
 		void draw(sf::RenderWindow& window) {
 			m_shape.setPosition(m_position);
 			m_shape.setRotation(m_rotation);
@@ -91,33 +104,55 @@ class Player {
 
 int main()
 {
-	sf::RenderWindow window( sf::VideoMode(WINDOW_RESOLUTION), "SFML Asteroids", sf::Style::Close);
-	window.setVerticalSyncEnabled(true);
+    sf::RenderWindow window(sf::VideoMode(WINDOW_RESOLUTION), "SFML Asteroids", sf::Style::Close);
+    window.setVerticalSyncEnabled(true);
 
-	sf::Clock clock;
-	Player player;
-	std::vector<Bullet> bullets;
+    sf::Clock clock;
+    Player player;
+    std::vector<Bullet> bullets;
 
-	while (window.isOpen())
-	{
-		float delta = clock.restart().asSeconds();
-		
-		while (const std::optional event = window.pollEvent())
-		{
-			if (event->is<sf::Event::Closed>())
-				window.close();
-		}
+    // Создаем общую форму для отрисовки всех пуль
+    sf::RectangleShape sharedBulletShape(sf::Vector2f(Bullet::Size, Bullet::Size));
+    sharedBulletShape.setFillColor(sf::Color::White); // Пусть пули будут белыми
 
-		// === === === === Логика === === === ===
+    while (window.isOpen())
+    {
+        float delta = clock.restart().asSeconds();
+        
+        while (const std::optional event = window.pollEvent())
+        {
+            if (event->is<sf::Event::Closed>())
+                window.close();
+        }
 
-		player.update(delta);
+        // === === === === Логика === === === ===
+        player.update(delta, bullets);
 
-	
-		// === === === === Графика === === === ===
-		
-		window.clear();
-		player.draw(window);
-		window.display();
-	}
+        // Обновляем пули (обычный range-based for здесь чище)
+        for (auto& bullet : bullets) {
+            bullet.update(delta);
+        }
+
+        // Не забываем очищать вектор от уничтоженных пуль (код из первого вопроса)
+        bullets.erase(
+            std::remove_if(bullets.begin(), bullets.end(), [](const Bullet& b) {
+                return b.isExpired();
+            }),
+            bullets.end()
+        );
+    
+        // === === === === Графика === === === ===
+        window.clear();
+        
+        player.draw(window);
+
+        // ОТРИСОВКА ПУЛЬ:
+        for (const auto& bullet : bullets) {
+            bullet.draw(window, sharedBulletShape);
+        }
+
+        window.display();
+    }
 }
+
 
