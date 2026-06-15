@@ -193,9 +193,8 @@ int main()
         for (Asteroid &asteroid : asteroids) {
           asteroid.update(delta);
         }
-        if (asteroidSpawnTimer.getElapsedTime().asSeconds() >= 1) {
-          asteroidSpawnTimer.restart();
-          asteroids.push_back(Asteroid({300.f, 300.f}, {100.f, 100.f}));
+        for (Bullet &bullet : bullets) {
+          bullet.update(delta);
         }
 
         for (Bullet& bullet : bullets) {
